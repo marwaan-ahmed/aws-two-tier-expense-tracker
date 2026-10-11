@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}Expenses{% endblock %} · Expense tracker</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="wrap masthead">
+    <a class="wordmark" href="{{ url_for('index') }}">Expense tracker</a>
+  </header>
+
+  <main class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="wrap site-footer">
+    Served by <code>{{ served_by.instance_id }}</code>
+    {%- if served_by.az %} in <code>{{ served_by.az }}</code>{% else %} (not on EC2){% endif %}
+  </footer>
+</body>
+</html>

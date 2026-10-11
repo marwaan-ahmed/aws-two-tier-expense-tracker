@@ -1,0 +1,53 @@
+# systemd unit for the expense tracker.
+# Installed by the EC2 user_data as /etc/systemd/system/expense-app.service.
+# The contract it relies on (paths, user, env file) is described in README.md.
+
+[Unit]
+Description=Expense tracker web app (Flask + gunicorn)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=expense-app
+Group=expense-app
+WorkingDirectory=/opt/expense-app
+
+# DB_HOST, DB_PORT, DB_NAME, DB_SECRET_ARN, AWS_REGION. systemd (root) reads
+# this file before dropping privileges, so it can be root-only (mode 0600).
+EnvironmentFile=/etc/sysconfig/expense-app
+Environment=PYTHONUNBUFFERED=1
+
+# Workers: t4g.micro has 2 vCPUs and 1 GiB RAM. 3 workers (~60 MB each) is
+# plenty for one user and leaves memory for the OS, SSM and CloudWatch agents.
+ExecStart=/opt/expense-app/venv/bin/gunicorn --bind 0.0.0.0:8000 --workers 3 app:app
+
+# Stopping (e.g. ASG instance refresh): SIGTERM goes to the gunicorn master
+# only, which lets in-flight requests finish (gunicorn's default 30 s) before
+# its workers exit. This is the setting gunicorn's own docs recommend.
+KillMode=mixed
+
+Restart=always
+# 5 s between restarts also keeps a crash loop below systemd's default start
+# limit (5 starts in 10 s), so it keeps trying instead of giving up.
+RestartSec=5
+
+# Logs: the CloudWatch agent tails files, not journald, so stdout and stderr
+# go to a file. systemd (as root) opens it before starting the app. It lives
+# directly in /var/log on purpose: systemd opens this file *before* it would
+# create a LogsDirectory=, so a file inside a new directory fails on first boot.
+StandardOutput=append:/var/log/expense-app.log
+StandardError=inherit
+
+# Hardening: the app only reads its code and talks over the network.
+# These are the high-value basics; check the result on an instance with
+#   systemd-analyze security expense-app
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+# Port 8000 is above 1024, so no Linux capabilities are needed at all.
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

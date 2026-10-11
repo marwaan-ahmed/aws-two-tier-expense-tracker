@@ -1,0 +1,33 @@
+{# Month title, total, previous/next links and the two views of the month.
+   Included by expenses.html and summary.html. Month links stay on the same view. #}
+{% set view = "summary" if request.endpoint == "summary" else "list_expenses" %}
+<div class="month-head">
+  <div>
+    <h1>{{ month|month_label }}</h1>
+    <p class="month-total">
+      <strong>{{ total|gbp }}</strong> spent
+      {%- if expense_count %} across {{ expense_count }} {{ "expense" if expense_count == 1 else "expenses" }}{% endif %}
+    </p>
+  </div>
+
+  <nav class="month-nav" aria-label="Month">
+    {% if not is_current_month %}
+      <a href="{{ url_for(view, month=current_month_key) }}">This month</a>
+    {% endif %}
+    {% if prev_month %}
+      <a rel="prev" href="{{ url_for(view, month=prev_month.strftime('%Y-%m')) }}"
+         aria-label="Previous month, {{ prev_month|month_label }}"><span aria-hidden="true">←</span> {{ prev_month.strftime('%B') }}</a>
+    {% endif %}
+    {% if next_month %}
+      <a rel="next" href="{{ url_for(view, month=next_month.strftime('%Y-%m')) }}"
+         aria-label="Next month, {{ next_month|month_label }}">{{ next_month.strftime('%B') }} <span aria-hidden="true">→</span></a>
+    {% endif %}
+  </nav>
+</div>
+
+<nav class="tabs" aria-label="View">
+  <a href="{{ url_for('list_expenses', month=month_key) }}"
+     {%- if view == "list_expenses" %} aria-current="page"{% endif %}>Expenses</a>
+  <a href="{{ url_for('summary', month=month_key) }}"
+     {%- if view == "summary" %} aria-current="page"{% endif %}>By category</a>
+</nav>

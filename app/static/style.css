@@ -1,0 +1,444 @@
+/* Expense tracker.
+   Laid out like a monthly statement: type and thin rules instead of boxes.
+   No JavaScript and no inline styles, so the Content-Security-Policy can stay
+   strict. Light and dark follow the OS setting. */
+
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --panel: #f6f5f1;
+  --text: #1b1b19;
+  --muted: #67645d;
+  --rule: #e6e4df;
+  --field: #ffffff;
+  --field-border: #8a867c;
+  --accent: #1c5a44;
+  --accent-hover: #134434;
+  --on-accent: #ffffff;
+  --danger: #a5321e;
+  --on-danger: #ffffff;
+  --danger-bg: #fcefec;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151513;
+    --panel: #1e1d1b;
+    --text: #e8e6e0;
+    --muted: #a3a097;
+    --rule: #2e2d29;
+    --field: #151513;
+    --field-border: #7d796f;
+    --accent: #8acaa8;
+    --accent-hover: #a9dbc0;
+    --on-accent: #10231a;
+    --danger: #f19582;
+    --on-danger: #2b0f09;
+    --danger-bg: #3b211c;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0 20px;
+  background: var(--bg);
+  color: var(--text);
+  font: 1rem/1.5 var(--sans);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+h1,
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.wrap {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+/* ---- Top of the page ---------------------------------------------------- */
+
+.masthead {
+  padding-top: 20px;
+}
+
+.wordmark {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.wordmark:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+main {
+  padding-top: 40px;
+  padding-bottom: 64px;
+}
+
+/* ---- Month heading, total and previous/next ------------------------------ */
+
+.month-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 32px;
+}
+
+h1 {
+  font-family: var(--serif);
+  font-size: 2.5rem;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.month-total {
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+.month-total strong {
+  color: var(--text);
+  font-family: var(--serif);
+  font-size: 1.375rem;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.month-nav {
+  display: flex;
+  gap: 20px;
+}
+
+.month-nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.month-nav a:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+/* ---- The two views of a month ------------------------------------------- */
+
+.tabs {
+  display: flex;
+  gap: 28px;
+  margin: 32px 0 24px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.tabs a {
+  margin-bottom: -1px;
+  padding: 8px 0;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.tabs a:hover {
+  color: var(--text);
+}
+
+.tabs a[aria-current="page"] {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+}
+
+/* ---- New expense --------------------------------------------------------- */
+
+.entry {
+  margin-bottom: 32px;
+  padding: 16px;
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.form-alert {
+  margin-bottom: 12px;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* One row on wider screens, like a line in a ledger. */
+.entry-form {
+  display: grid;
+  grid-template-columns: 7rem 9.5rem 9.5rem 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+}
+
+label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.optional {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+input,
+select {
+  width: 100%;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--field-border);
+  border-radius: 4px;
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+}
+
+input::placeholder {
+  color: var(--muted);
+}
+
+[aria-invalid="true"] {
+  border-color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+/* Lines the button up with the inputs: an empty line the height of a label. */
+.form-actions::before {
+  content: "";
+  display: block;
+  height: calc(0.875rem * 1.5 + 4px);
+}
+
+.btn {
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 4px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.btn-danger {
+  height: 32px;
+  padding: 0 10px;
+  background: var(--danger);
+  color: var(--on-danger);
+  font-size: 0.875rem;
+}
+
+/* ---- Ledger tables ------------------------------------------------------- */
+
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ledger th,
+.ledger td {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--rule);
+  font-weight: 400;
+  text-align: left;
+  vertical-align: top;
+}
+
+/* A long description with no spaces must wrap, not push the page sideways. */
+.ledger td,
+.ledger tbody th {
+  overflow-wrap: anywhere;
+}
+
+.ledger th:first-child,
+.ledger td:first-child {
+  padding-left: 0;
+}
+
+.ledger th:last-child,
+.ledger td:last-child {
+  padding-right: 0;
+}
+
+.ledger thead th {
+  padding-top: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.ledger tbody th {
+  font-weight: 500;
+}
+
+.ledger .num {
+  font-variant-numeric: lining-nums tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ledger .date {
+  white-space: nowrap;
+}
+
+/* Second line under a date, description or category. */
+.sub {
+  display: block;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.ledger .actions {
+  width: 6.5rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Delete with a confirm step and no JavaScript: <details> reveals the real button. */
+.confirm summary {
+  color: var(--muted);
+  font-size: 0.875rem;
+  list-style: none;
+  cursor: pointer;
+}
+
+.confirm summary::-webkit-details-marker {
+  display: none;
+}
+
+.confirm summary:hover {
+  color: var(--danger);
+  text-decoration: underline;
+}
+
+.confirm .when-open,
+.confirm[open] .when-closed {
+  display: none;
+}
+
+.confirm[open] .when-open {
+  display: inline;
+}
+
+.confirm form {
+  margin-top: 6px;
+}
+
+.empty {
+  padding: 24px 0;
+  color: var(--muted);
+}
+
+/* ---- Footer and error page ----------------------------------------------- */
+
+.site-footer {
+  padding-top: 16px;
+  padding-bottom: 32px;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.site-footer code {
+  color: var(--text);
+  font-family: var(--mono);
+}
+
+.error-page {
+  display: grid;
+  gap: 16px;
+  max-width: 34rem;
+}
+
+.error-code {
+  color: var(--muted);
+}
+
+/* ---- Narrow screens: the form becomes two columns ------------------------ */
+
+@media (max-width: 860px) {
+  h1 {
+    font-size: 2rem;
+  }
+
+  .entry-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .field-date,
+  .field-description,
+  .form-actions {
+    grid-column: 1 / -1;
+  }
+
+  .form-actions::before {
+    display: none;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+
+  /* Give the description as much room as possible. */
+  .ledger th,
+  .ledger td {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  .ledger .actions {
+    width: 1%;
+  }
+}

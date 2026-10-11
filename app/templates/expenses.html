@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}{{ month|month_label }}{% endblock %}
+
+{% block content %}
+{% include "_month_header.html" %}
+
+<section class="entry" aria-labelledby="add-heading">
+  <h2 id="add-heading" class="visually-hidden">Add an expense</h2>
+
+  {% if errors %}
+    <p class="form-alert" role="alert">Not saved. Check the {{ "field" if errors|length == 1 else "fields" }} marked below.</p>
+  {% endif %}
+
+  <form class="entry-form" method="post" action="{{ url_for('add_expense') }}">
+    {# Which month to show again if something needs fixing. #}
+    <input type="hidden" name="month" value="{{ month_key }}">
+
+    <div class="field">
+      <label for="amount">Amount (£)</label>
+      <input id="amount" name="amount" inputmode="decimal" autocomplete="off" required maxlength="11"
+             placeholder="0.00" value="{{ form.amount }}"
+             {% if errors.amount %}aria-invalid="true" aria-describedby="amount-error"{% endif %}>
+      {% if errors.amount %}<p class="field-error" id="amount-error">{{ errors.amount }}</p>{% endif %}
+    </div>
+
+    <div class="field">
+      <label for="category_id">Category</label>
+      <select id="category_id" name="category_id" required
+              {% if errors.category_id %}aria-invalid="true" aria-describedby="category-error"{% endif %}>
+        <option value="">Choose…</option>
+        {% for category in categories %}
+          <option value="{{ category.id }}" {% if form.category_id == category.id|string %}selected{% endif %}>{{ category.name }}</option>
+        {% endfor %}
+      </select>
+      {% if errors.category_id %}<p class="field-error" id="category-error">{{ errors.category_id }}</p>{% endif %}
+    </div>
+
+    <div class="field field-date">
+      <label for="spent_on">Date</label>
+      <input id="spent_on" name="spent_on" type="date" required min="{{ min_date }}" max="{{ max_date }}"
+             value="{{ form.spent_on }}"
+             {% if errors.spent_on %}aria-invalid="true" aria-describedby="date-error"{% endif %}>
+      {% if errors.spent_on %}<p class="field-error" id="date-error">{{ errors.spent_on }}</p>{% endif %}
+    </div>
+
+    <div class="field field-description">
+      <label for="description">Description <span class="optional">(optional)</span></label>
+      <input id="description" name="description" maxlength="200" autocomplete="off" value="{{ form.description }}"
+             {% if errors.description %}aria-invalid="true" aria-describedby="description-error"{% endif %}>
+      {% if errors.description %}<p class="field-error" id="description-error">{{ errors.description }}</p>{% endif %}
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">Add expense</button>
+    </div>
+  </form>
+</section>
+
+{% if expenses %}
+  <table class="ledger">
+    <caption class="visually-hidden">Expenses in {{ month|month_label }}, newest first</caption>
+    <thead>
+      <tr>
+        <th scope="col">Date</th>
+        <th scope="col">Details</th>
+        <th scope="col" class="num">Amount</th>
+        <th scope="col"><span class="visually-hidden">Actions</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in expenses %}
+        {% set label = (e.description or e.category) ~ ", " ~ e.amount|gbp ~ ", " ~ e.spent_on|short_date %}
+        <tr>
+          <td class="date">
+            <time datetime="{{ e.spent_on.isoformat() }}">{{ e.spent_on.day }} {{ e.spent_on.strftime('%b') }}</time>
+            <span class="sub">{{ e.spent_on.strftime('%a') }}</span>
+          </td>
+          <td>
+            {{ e.description or e.category }}
+            {% if e.description %}<span class="sub">{{ e.category }}</span>{% endif %}
+          </td>
+          <td class="num">{{ e.amount|gbp }}</td>
+          <td class="actions">
+            {# Two-step delete without JavaScript: "Delete" reveals the real button. #}
+            <details class="confirm">
+              <summary>
+                <span class="when-closed">Delete</span><span class="when-open">Cancel</span>
+                <span class="visually-hidden">: {{ label }}</span>
+              </summary>
+              <form method="post" action="{{ url_for('delete_expense', expense_id=e.id) }}">
+                <button class="btn btn-danger" type="submit">Yes, delete<span class="visually-hidden"> {{ label }}</span></button>
+              </form>
+            </details>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="empty">Nothing recorded for {{ month|month_label }}.</p>
+{% endif %}
+{% endblock %}

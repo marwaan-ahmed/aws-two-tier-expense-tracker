@@ -1,0 +1,32 @@
+# Terraform working directories and plugins
+.terraform/
+
+# State files (state lives in S3; never commit it — it can contain sensitive values)
+*.tfstate
+*.tfstate.*
+
+# Variable files with personal values (e.g. my IP for the WAF allow-list)
+*.tfvars
+*.tfvars.json
+
+# Saved plans and crash logs
+*.tfplan
+crash.log
+crash.*.log
+
+# Local override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Python (app)
+__pycache__/
+*.pyc
+.venv/
+
+# macOS
+.DS_Store
+
+# Lock files belong to root folders only (terraform/, bootstrap/), not modules
+terraform/modules/**/.terraform.lock.hcl

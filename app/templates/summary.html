@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ month|month_label }} by category{% endblock %}
+
+{% block content %}
+{% include "_month_header.html" %}
+
+{% if rows %}
+  <table class="ledger">
+    <caption class="visually-hidden">Spending by category in {{ month|month_label }}</caption>
+    <thead>
+      <tr>
+        <th scope="col">Category</th>
+        <th scope="col" class="num">Amount</th>
+        <th scope="col" class="num">Share</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+        <tr>
+          <th scope="row">
+            {{ r.category }}
+            <span class="sub">{{ r.count }} {{ "expense" if r.count == 1 else "expenses" }}</span>
+          </th>
+          <td class="num">{{ r.total|gbp }}</td>
+          <td class="num">{{ r.percent }}%</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="empty">Nothing recorded for {{ month|month_label }}.</p>
+{% endif %}
+{% endblock %}
