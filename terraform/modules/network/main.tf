@@ -1,11 +1,3 @@
-# The network: one VPC across two availability zones (a and b), with three
-# kinds of subnet in each zone:
-#   public - the load balancer and the NAT gateway; can reach the internet
-#   app    - the web servers; can reach out to the internet only through the NAT gateway
-#   data   - the database; no internet access at all
-#
-# Names, address ranges and zones come in as variables (see variables.tf).
-
 terraform {
   required_version = ">= 1.10"
 
@@ -17,6 +9,8 @@ terraform {
   }
 }
 
+# VPC
+
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
@@ -26,9 +20,6 @@ resource "aws_vpc" "main" {
   }
 }
 
-# Every VPC comes with a default security group that lets everything inside it
-# talk to everything else. Declaring it with no rules empties it, so nothing
-# can use it by accident.
 resource "aws_default_security_group" "default" {
   vpc_id = aws_vpc.main.id
 }
@@ -41,8 +32,7 @@ resource "aws_internet_gateway" "main" {
   }
 }
 
-# ---- Subnets ----
-# In each list variable, [0] is zone a and [1] is zone b.
+# Subnets
 
 resource "aws_subnet" "public_a" {
   vpc_id            = aws_vpc.main.id
@@ -104,9 +94,8 @@ resource "aws_subnet" "data_b" {
   }
 }
 
-# ---- NAT gateway: lets the app subnets reach out without being reachable ----
+# NAT gateway
 
-# The NAT gateway needs its own public IP address.
 resource "aws_eip" "nat" {
   domain = "vpc"
 
@@ -115,8 +104,6 @@ resource "aws_eip" "nat" {
   }
 }
 
-# One NAT gateway, in zone a, to keep the cost down. If zone a goes down, the
-# app servers in zone b lose outbound access only; the site stays up.
 resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.public_a.id
@@ -125,14 +112,11 @@ resource "aws_nat_gateway" "main" {
     Name = "${var.name}-nat"
   }
 
-  # To ensure proper ordering, it is recommended to add an explicit dependency
-  # on the Internet Gateway for the VPC.
   depends_on = [aws_internet_gateway.main]
 }
 
-# ---- Route tables: where each subnet's traffic is allowed to go ----
+# Route tables
 
-# Public subnets: anything outside the VPC goes through the internet gateway.
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -156,7 +140,6 @@ resource "aws_route_table_association" "public_b" {
   route_table_id = aws_route_table.public.id
 }
 
-# App subnets: anything outside the VPC goes through the NAT gateway.
 resource "aws_route_table" "app" {
   vpc_id = aws_vpc.main.id
 
@@ -180,8 +163,6 @@ resource "aws_route_table_association" "app_b" {
   route_table_id = aws_route_table.app.id
 }
 
-# Data subnets: no routes at all, so the database can only talk to other
-# subnets inside the VPC.
 resource "aws_route_table" "data" {
   vpc_id = aws_vpc.main.id
 
@@ -200,10 +181,8 @@ resource "aws_route_table_association" "data_b" {
   route_table_id = aws_route_table.data.id
 }
 
-# ---- S3 endpoint ----
+# S3 endpoint
 
-# A free, private route to S3 for the app subnets. Amazon Linux updates and the
-# app's code are downloaded from S3, so they skip the NAT gateway.
 resource "aws_vpc_endpoint" "s3" {
   vpc_id          = aws_vpc.main.id
   service_name    = "com.amazonaws.${var.region}.s3"
