@@ -1,7 +1,3 @@
-# Settings used in more than one place: resource names, the tags on every
-# resource (providers.tf) and the module calls (main.tf). The network's address
-# ranges are used once, so they're written out in main.tf.
-
 variable "project" {
   description = "Project name, used in resource names and the Project tag."
   type        = string
@@ -18,4 +14,9 @@ variable "region" {
   description = "AWS region to build in."
   type        = string
   default     = "eu-west-2"
+}
+
+variable "my_ip" {
+  description = "Your public IP address with /32 on the end, for example 203.0.113.10/32. Only this address gets past the WAF."
+  type        = string
 }
