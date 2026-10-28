@@ -12,7 +12,7 @@ There is no login: the WAF only lets your IP address through.
 
 | Stack | |
 |---|---|
-| Language | Python 3.9 (Amazon Linux 2023 system Python); also runs on 3.12 |
+| Language | Python 3.12 (Amazon Linux 2023 `python3.12` package) |
 | Web | Flask + Jinja templates (server-rendered HTML, no JavaScript) |
 | Database | PostgreSQL through `psycopg` 3 with plain SQL (no ORM) |
 | AWS | `boto3`, only to read the database secret |
@@ -61,7 +61,7 @@ configuration fails straight away. It doesn't half-work.
 
 ## Run it locally
 
-You need Python 3.9+ and a PostgreSQL server you can reach (for example
+You need Python 3.12+ and a PostgreSQL server you can reach (for example
 Postgres.app, or `brew install postgresql@16`). Create an empty database. The
 app creates its own tables on first use:
 
@@ -73,7 +73,7 @@ Create a virtual environment **outside** `app/`, so the Terraform zip of
 `app/` doesn't pick it up:
 
 ```bash
-python3 -m venv ~/.venvs/expense-app
+python3.12 -m venv ~/.venvs/expense-app
 ~/.venvs/expense-app/bin/pip install -r requirements.txt
 ```
 
@@ -97,7 +97,7 @@ For automatic reloading while editing, use
 | Item | Value |
 |---|---|
 | App code | `/opt/expense-app/` (with `app.py` at its root), owned by root, read-only for the app |
-| Virtualenv | `/opt/expense-app/venv` (`python3 -m venv`, then `pip install -r requirements.txt`) |
+| Virtualenv | `/opt/expense-app/venv` (`python3.12 -m venv`, then `pip install -r requirements.txt`) |
 | System user | `expense-app`, no login shell, no home directory |
 | Environment file | `/etc/sysconfig/expense-app`, `root:root`, mode `0600` (systemd reads it as root) |
 | systemd unit | `expense-app.service` → `/etc/systemd/system/expense-app.service`, then `systemctl enable --now expense-app` |
@@ -111,7 +111,7 @@ A sketch of the steps (Phase 3 writes the real script):
 ```bash
 useradd --system --no-create-home --shell /sbin/nologin expense-app
 mkdir -p /opt/expense-app && unzip -o /tmp/app.zip -d /opt/expense-app
-python3 -m venv /opt/expense-app/venv
+python3.12 -m venv /opt/expense-app/venv
 /opt/expense-app/venv/bin/pip install -r /opt/expense-app/requirements.txt   # via the NAT gateway to PyPI
 
 cat > /etc/sysconfig/expense-app <<EOF
@@ -195,9 +195,12 @@ The reasoning behind each of these is in comments next to the code in `app.py`.
 
 ## Python version note
 
-AL2023's system Python is 3.9, which reached upstream end of life in October
-2025. The pinned versions are the newest that still support 3.9 **and** have
-arm64 wheels for 3.12. boto3 has stopped supporting 3.9 (it logs a
-deprecation warning at start-up), so `1.42.x` is its last 3.9 line. AL2023
-also offers newer Pythons as packages (e.g. `python3.12`). Moving the venv to it later only means
-changing `python3` to `python3.12` in `user_data` and bumping the pins.
+The servers run Python 3.12 from Amazon Linux 2023's `python3.12` package, not
+the system Python 3.9, which is end of life. gunicorn runs with
+`--no-control-socket`: since gunicorn 26 it otherwise creates a control socket
+in the user's home directory, and the `expense-app` user has none.
+
+The service uses `ProtectHome=tmpfs`, not `ProtectHome=yes`. libpq looks for an optional
+client certificate in `~/.postgresql/`. With `yes` that lookup gets "permission
+denied" and the connection fails. With `tmpfs` home directories look empty, so
+the lookup gets "not found" and carries on.

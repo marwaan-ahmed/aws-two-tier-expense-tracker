@@ -26,8 +26,24 @@ module "compute" {
   source = "./modules/compute"
 
   name                  = "${var.project}-${var.environment}"
+  region                = var.region
   vpc_id                = module.network.vpc_id
+  vpc_cidr              = module.network.vpc_cidr
   app_subnet_ids        = module.network.app_subnet_ids
   alb_security_group_id = module.loadbalancer.security_group_id
   target_group_arn      = module.loadbalancer.target_group_arn
+  app_dir               = "${path.root}/../app"
+  db_host               = module.database.address
+  db_name               = module.database.db_name
+  db_secret_arn         = module.database.secret_arn
+}
+
+module "database" {
+  source = "./modules/database"
+
+  name                  = "${var.project}-${var.environment}"
+  vpc_id                = module.network.vpc_id
+  data_subnet_ids       = module.network.data_subnet_ids
+  app_security_group_id = module.compute.security_group_id
+  multi_az              = false
 }
