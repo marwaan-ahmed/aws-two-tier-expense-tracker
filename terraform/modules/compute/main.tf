@@ -1,14 +1,3 @@
-terraform {
-  required_version = ">= 1.10"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 6.0"
-    }
-  }
-}
-
 # Security group
 
 resource "aws_security_group" "app" {
@@ -37,6 +26,60 @@ resource "aws_vpc_security_group_egress_rule" "https" {
   to_port           = 443
 }
 
+resource "aws_vpc_security_group_egress_rule" "postgres" {
+  security_group_id = aws_security_group.app.id
+  cidr_ipv4         = var.vpc_cidr
+  from_port         = 5432
+  ip_protocol       = "tcp"
+  to_port           = 5432
+}
+
+# App code
+
+data "archive_file" "app" {
+  type        = "zip"
+  source_dir  = var.app_dir
+  output_path = "${path.module}/app.zip"
+  excludes    = ["__pycache__"]
+}
+
+resource "aws_s3_bucket" "app" {
+  bucket_prefix = "${var.name}-app-"
+  force_destroy = true
+}
+
+resource "aws_s3_bucket_public_access_block" "app" {
+  bucket = aws_s3_bucket.app.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "app" {
+  bucket = aws_s3_bucket.app.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_object" "app" {
+  bucket = aws_s3_bucket.app.id
+  key    = "app-${data.archive_file.app.output_md5}.zip"
+  source = data.archive_file.app.output_path
+}
+
+# Logs
+
+resource "aws_cloudwatch_log_group" "app" {
+  name              = "/${var.name}/app"
+  retention_in_days = 7
+}
+
 # IAM
 
 resource "aws_iam_role" "app" {
@@ -59,6 +102,32 @@ resource "aws_iam_role" "app" {
 resource "aws_iam_role_policy_attachment" "ssm" {
   role       = aws_iam_role.app.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_role_policy_attachment" "cloudwatch" {
+  role       = aws_iam_role.app.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+resource "aws_iam_role_policy" "app" {
+  name = "${var.name}-app"
+  role = aws_iam_role.app.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action   = "secretsmanager:GetSecretValue"
+        Effect   = "Allow"
+        Resource = var.db_secret_arn
+      },
+      {
+        Action   = "s3:GetObject"
+        Effect   = "Allow"
+        Resource = "${aws_s3_bucket.app.arn}/*"
+      }
+    ]
+  })
 }
 
 resource "aws_iam_instance_profile" "app" {
@@ -91,7 +160,15 @@ resource "aws_launch_template" "app" {
     }
   }
 
-  user_data = filebase64("${path.module}/user_data.sh")
+  user_data = base64encode(templatefile("${path.module}/user_data.sh", {
+    region        = var.region
+    app_bucket    = aws_s3_bucket.app.id
+    app_key       = aws_s3_object.app.key
+    db_host       = var.db_host
+    db_name       = var.db_name
+    db_secret_arn = var.db_secret_arn
+    log_group     = aws_cloudwatch_log_group.app.name
+  }))
 
   tag_specifications {
     resource_type = "instance"
@@ -114,7 +191,15 @@ resource "aws_autoscaling_group" "app" {
 
   launch_template {
     id      = aws_launch_template.app.id
-    version = "$Latest"
+    version = aws_launch_template.app.latest_version
+  }
+
+  instance_refresh {
+    strategy = "Rolling"
+
+    preferences {
+      min_healthy_percentage = 50
+    }
   }
 
   enabled_metrics = [

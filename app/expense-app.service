@@ -19,7 +19,7 @@ Environment=PYTHONUNBUFFERED=1
 
 # Workers: t4g.micro has 2 vCPUs and 1 GiB RAM. 3 workers (~60 MB each) is
 # plenty for one user and leaves memory for the OS, SSM and CloudWatch agents.
-ExecStart=/opt/expense-app/venv/bin/gunicorn --bind 0.0.0.0:8000 --workers 3 app:app
+ExecStart=/opt/expense-app/venv/bin/gunicorn --bind 0.0.0.0:8000 --workers 3 --no-control-socket app:app
 
 # Stopping (e.g. ASG instance refresh): SIGTERM goes to the gunicorn master
 # only, which lets in-flight requests finish (gunicorn's default 30 s) before
@@ -43,7 +43,7 @@ StandardError=inherit
 #   systemd-analyze security expense-app
 NoNewPrivileges=yes
 ProtectSystem=strict
-ProtectHome=yes
+ProtectHome=tmpfs
 PrivateTmp=yes
 PrivateDevices=yes
 # Port 8000 is above 1024, so no Linux capabilities are needed at all.

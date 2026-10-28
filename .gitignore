@@ -30,3 +30,6 @@ __pycache__/
 
 # Lock files belong to root folders only (terraform/, bootstrap/), not modules
 terraform/modules/**/.terraform.lock.hcl
+
+# App zip
+*.zip
