@@ -47,3 +47,15 @@ module "database" {
   app_security_group_id = module.compute.security_group_id
   multi_az              = false
 }
+
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  name                     = "${var.project}-${var.environment}"
+  region                   = var.region
+  alert_email              = var.alert_email
+  load_balancer_arn_suffix = module.loadbalancer.arn_suffix
+  target_group_arn_suffix  = module.loadbalancer.target_group_arn_suffix
+  asg_name                 = module.compute.asg_name
+  db_instance_id           = module.database.identifier
+}

@@ -11,3 +11,8 @@ output "asg_name" {
   description = "The Auto Scaling group, for the 'terminate a server' test."
   value       = module.compute.asg_name
 }
+
+output "dashboard_url" {
+  description = "The CloudWatch dashboard."
+  value       = "https://${var.region}.console.aws.amazon.com/cloudwatch/home?region=${var.region}#dashboards/dashboard/${module.monitoring.dashboard_name}"
+}
