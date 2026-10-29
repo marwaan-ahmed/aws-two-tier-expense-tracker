@@ -9,3 +9,11 @@ output "security_group_id" {
 output "target_group_arn" {
   value = aws_lb_target_group.app.arn
 }
+
+output "arn_suffix" {
+  value = aws_lb.main.arn_suffix
+}
+
+output "target_group_arn_suffix" {
+  value = aws_lb_target_group.app.arn_suffix
+}

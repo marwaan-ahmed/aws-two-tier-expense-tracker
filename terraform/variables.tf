@@ -20,3 +20,8 @@ variable "my_ip" {
   description = "Your public IP address with /32 on the end, for example 203.0.113.10/32. Only this address gets past the WAF."
   type        = string
 }
+
+variable "alert_email" {
+  description = "Email address for alarm and recovery emails. Set it in terraform.tfvars."
+  type        = string
+}
