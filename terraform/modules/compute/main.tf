@@ -201,14 +201,6 @@ resource "aws_autoscaling_group" "app" {
       min_healthy_percentage = 50
     }
   }
-
-  enabled_metrics = [
-    "GroupDesiredCapacity",
-    "GroupInServiceInstances",
-    "GroupPendingInstances",
-    "GroupTerminatingInstances",
-    "GroupTotalInstances",
-  ]
 }
 
 resource "aws_autoscaling_policy" "cpu" {

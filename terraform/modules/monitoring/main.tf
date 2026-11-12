@@ -153,9 +153,8 @@ resource "aws_cloudwatch_dashboard" "main" {
   dashboard_body = jsonencode({
     widgets = [
       {
-        type   = "metric"
-        width  = 12
-        height = 6
+        type  = "metric"
+        width = 12
         properties = {
           title   = "Requests"
           region  = var.region
@@ -165,9 +164,8 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
       {
-        type   = "metric"
-        width  = 12
-        height = 6
+        type  = "metric"
+        width = 12
         properties = {
           title  = "Errors (5xx)"
           region = var.region
@@ -180,9 +178,8 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
       {
-        type   = "metric"
-        width  = 12
-        height = 6
+        type  = "metric"
+        width = 12
         properties = {
           title   = "Response time (p95, seconds)"
           region  = var.region
@@ -192,9 +189,8 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
       {
-        type   = "metric"
-        width  = 12
-        height = 6
+        type  = "metric"
+        width = 12
         properties = {
           title  = "Healthy and unhealthy servers"
           region = var.region
@@ -207,21 +203,18 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
       {
-        type   = "metric"
-        width  = 12
-        height = 6
+        type  = "metric"
+        width = 12
         properties = {
-          title   = "Servers running"
+          title   = "Server CPU (%)"
           region  = var.region
-          stat    = "Maximum"
-          period  = 60
-          metrics = [["AWS/AutoScaling", "GroupInServiceInstances", "AutoScalingGroupName", var.asg_name]]
+          stat    = "Average"
+          metrics = [["AWS/EC2", "CPUUtilization", "AutoScalingGroupName", var.asg_name]]
         }
       },
       {
-        type   = "metric"
-        width  = 12
-        height = 6
+        type  = "metric"
+        width = 12
         properties = {
           title   = "Database CPU (%)"
           region  = var.region
@@ -231,9 +224,8 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
       {
-        type   = "metric"
-        width  = 12
-        height = 6
+        type  = "metric"
+        width = 12
         properties = {
           title   = "Database connections"
           region  = var.region
@@ -243,14 +235,12 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
       {
-        type   = "metric"
-        width  = 12
-        height = 6
+        type  = "metric"
+        width = 12
         properties = {
           title   = "Database free disk (bytes)"
           region  = var.region
           stat    = "Minimum"
-          period  = 300
           metrics = [["AWS/RDS", "FreeStorageSpace", "DBInstanceIdentifier", var.db_instance_id]]
         }
       }
