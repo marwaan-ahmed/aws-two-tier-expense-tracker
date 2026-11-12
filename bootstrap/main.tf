@@ -1,24 +1,15 @@
-# Long-lived resources that must survive `terraform destroy` in terraform/:
-# the bucket that holds the main stack's Terraform state, and the monthly budget alert.
-
 data "aws_caller_identity" "current" {}
 
-# ---- Terraform state bucket -------------------------------------------------
+# State bucket
 
 resource "aws_s3_bucket" "state" {
-  # Bucket names are global across all AWS accounts; the account ID makes it unique.
   bucket = "expense-tracker-tfstate-${data.aws_caller_identity.current.account_id}"
 
-  # Losing this bucket means Terraform forgets everything it built.
-  # To really delete it one day, remove this block first.
   lifecycle {
     prevent_destroy = true
   }
 }
 
-# Every state change keeps the previous version, so a bad apply can be undone.
-# No lifecycle rule to expire old versions: each is a few KB, so keeping them
-# costs next to nothing and they are the undo history.
 resource "aws_s3_bucket_versioning" "state" {
   bucket = aws_s3_bucket.state.id
 
@@ -32,7 +23,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "state" {
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256" # S3-managed keys: free, and enough for this project
+      sse_algorithm = "AES256"
     }
   }
 }
@@ -46,7 +37,6 @@ resource "aws_s3_bucket_public_access_block" "state" {
   restrict_public_buckets = true
 }
 
-# Refuse any request that isn't encrypted in transit (plain HTTP).
 data "aws_iam_policy_document" "state_tls_only" {
   statement {
     sid       = "DenyInsecureTransport"
@@ -72,18 +62,15 @@ resource "aws_s3_bucket_policy" "state" {
   policy = data.aws_iam_policy_document.state_tls_only.json
 }
 
-# ---- Budget alert -----------------------------------------------------------
+# Budget
 
-# Covers the whole account, not just this project, so it also catches anything
-# left running by accident. AWS budgets are in US dollars.
 resource "aws_budgets_budget" "monthly" {
   name         = "expense-tracker-monthly"
   budget_type  = "COST"
-  limit_amount = var.monthly_budget_usd
+  limit_amount = "7"
   limit_unit   = "USD"
   time_unit    = "MONTHLY"
 
-  # Email when real spending passes 80% of the budget...
   notification {
     comparison_operator        = "GREATER_THAN"
     threshold                  = 80
@@ -92,7 +79,6 @@ resource "aws_budgets_budget" "monthly" {
     subscriber_email_addresses = [var.alert_email]
   }
 
-  # ...and when AWS forecasts the month will end over budget.
   notification {
     comparison_operator        = "GREATER_THAN"
     threshold                  = 100

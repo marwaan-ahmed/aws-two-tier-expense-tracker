@@ -92,7 +92,7 @@ name&gt; (not on EC2)", because there is no EC2 metadata service on a laptop.
 For automatic reloading while editing, use
 `~/.venvs/expense-app/bin/flask --app app run --debug` instead.
 
-## Deployment contract (what the Phase 3 `user_data` must provide)
+## Deployment contract
 
 | Item | Value |
 |---|---|
@@ -106,68 +106,14 @@ For automatic reloading while editing, use
 | Log file | `/var/log/expense-app.log` (JSON lines, one per request; created by systemd as root, mode 0644) |
 | IAM (instance role) | `secretsmanager:GetSecretValue` on **that one secret ARN**. No KMS permission needed while the secret uses the default `aws/secretsmanager` key (the RDS default) |
 
-A sketch of the steps (Phase 3 writes the real script):
-
-```bash
-useradd --system --no-create-home --shell /sbin/nologin expense-app
-mkdir -p /opt/expense-app && unzip -o /tmp/app.zip -d /opt/expense-app
-python3.12 -m venv /opt/expense-app/venv
-/opt/expense-app/venv/bin/pip install -r /opt/expense-app/requirements.txt   # via the NAT gateway to PyPI
-
-cat > /etc/sysconfig/expense-app <<EOF
-DB_HOST=<rds address>
-DB_PORT=5432
-DB_NAME=<db name>
-DB_SECRET_ARN=<rds master user secret arn>
-AWS_REGION=eu-west-2
-EOF
-chmod 600 /etc/sysconfig/expense-app
-
-cp /opt/expense-app/expense-app.service /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable --now expense-app
-```
+The real steps are in `terraform/modules/compute/user_data.sh`.
 
 ### Logs → CloudWatch
 
 systemd appends the app's stdout and stderr to `/var/log/expense-app.log`,
 because the CloudWatch agent reads **files**, not the systemd journal. App lines
-are JSON. gunicorn's own start/stop lines are plain text. The CloudWatch agent
-config needs an entry like this. The agent runs as root unless its config sets
-`run_as_user`, so it can read the file:
-
-```json
-{
-  "logs": {
-    "logs_collected": {
-      "files": {
-        "collect_list": [
-          {
-            "file_path": "/var/log/expense-app.log",
-            "log_group_name": "/expense-tracker-dev/app",
-            "log_stream_name": "{instance_id}"
-          }
-        ]
-      }
-    }
-  }
-}
-```
-
-The file only grows, so also install a logrotate rule. Use `copytruncate`,
-because systemd keeps the file open:
-
-```
-/var/log/expense-app.log {
-    daily
-    rotate 3
-    maxsize 50M
-    missingok
-    notifempty
-    compress
-    copytruncate
-}
-```
+are JSON. gunicorn's own start/stop lines are plain text. The logrotate rule uses
+`copytruncate`, because systemd keeps the file open.
 
 ### Graceful shutdown (ASG instance refresh)
 

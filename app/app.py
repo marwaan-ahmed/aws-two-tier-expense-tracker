@@ -3,8 +3,6 @@
 It runs under gunicorn (sync workers) behind an Application Load Balancer and
 stores data in PostgreSQL. README.md explains the configuration and the
 contract with the infrastructure (port, health check, log file, IAM).
-
-Runs on Python 3.9 (Amazon Linux 2023 system Python) and 3.12.
 """
 
 import json
