@@ -17,7 +17,7 @@ A portfolio project: an expense tracker web app on a two-tier AWS architecture
 
 ## Monitoring
 
-Six CloudWatch alarms email me through SNS when something goes wrong, and again when it recovers. They
+Seven CloudWatch alarms email me through SNS when something goes wrong, and again when it recovers. They
 watch symptoms a user would notice first (errors, slowness, servers down), then the database. There's one
 dashboard with the same metrics (`terraform output dashboard_url`).
 
@@ -47,6 +47,14 @@ Over any 30 days:
   database; anything else is an app bug.
 - Fix: if it's the database, see the database alarms below and check it's `available` in RDS. If it's
   the app, fix the code and `terraform apply`. The instance refresh rolls it out.
+
+**Load balancer 5xx errors** (`*-lb-5xx-errors`)
+- Means: the load balancer couldn't get an answer from a server, so it sent the error itself (502 app
+  crashed mid-request, 503 no healthy servers, 504 server too slow). Expect this during the failure test.
+- Check: EC2 → Target groups → targets tab, to see if any servers are healthy. Then the app logs for
+  `WORKER TIMEOUT` (plain text from gunicorn, so the `"level": "ERROR"` search won't find it).
+- Fix: if no servers are healthy, follow the unhealthy hosts runbook. If workers are timing out, look for
+  a slow query or a database that's struggling (see the database alarms below).
 
 **Slow responses** (`*-slow-responses`)
 - Means: the slowest 5% of requests took longer than 0.5 seconds.
