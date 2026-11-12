@@ -51,6 +51,25 @@ resource "aws_cloudwatch_metric_alarm" "server_errors" {
   }
 }
 
+resource "aws_cloudwatch_metric_alarm" "lb_errors" {
+  alarm_name          = "${var.name}-lb-5xx-errors"
+  alarm_description   = "Load balancer returning 5xx errors"
+  namespace           = "AWS/ApplicationELB"
+  metric_name         = "HTTPCode_ELB_5XX_Count"
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  comparison_operator = "GreaterThanThreshold"
+  threshold           = 0
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  ok_actions          = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    LoadBalancer = var.load_balancer_arn_suffix
+  }
+}
+
 resource "aws_cloudwatch_metric_alarm" "slow_responses" {
   alarm_name          = "${var.name}-slow-responses"
   alarm_description   = "p95 response time over 500ms"
